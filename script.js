@@ -11,11 +11,13 @@ class GameManager {
     }
 
     init() {
+        console.log('Initializing GameManager...');
         this.setupEventListeners();
         this.setupNavigation();
         this.updateActiveGamesList();
         this.updateGameHistory();
         this.updatePlayerStats();
+        console.log('GameManager initialization complete');
     }
 
     // Data Storage Methods (LocalStorage)
@@ -113,10 +115,22 @@ class GameManager {
         // Clear the form
         this.clearGameRoundForm();
 
-        this.showModal('Draft Saved!', `Draft saved for <strong>${employeeName}</strong>!<br><br>You can now complete the information and activate the game when ready.`);
+        this.showModal('Draft Saved!', `Draft saved for <strong>${employeeName}</strong>!<br><br>You will be redirected to the Game Administration overview.`);
         
         // Update admin overview
         this.updateAdminOverview();
+        
+        // Navigate back to game administration section
+        setTimeout(() => {
+            this.switchAdminSection('game-administration');
+        }, 1500);
+    }
+
+    cancelGameDraft() {
+        if (confirm('Are you sure you want to cancel? All entered data will be lost.')) {
+            this.clearGameRoundForm();
+            this.switchAdminSection('game-administration');
+        }
     }
 
     activateGameFromDraft() {
@@ -194,60 +208,10 @@ class GameManager {
         return employeeName && statement1Title && statement2Title && statement3Title && lieStatement;
     }
 
-    setupFormValidation() {
-        const formInputs = [
-            'employee-name',
-            'statement1-title',
-            'statement2-title',
-            'statement3-title'
-        ];
 
-        const activateBtn = document.getElementById('admin-activate-game-btn');
-        const lieRadios = document.querySelectorAll('input[name="lie-statement"]');
 
-        const validateForm = () => {
-            const isComplete = this.isGameRoundComplete();
-            activateBtn.disabled = !isComplete;
-            
-            if (isComplete) {
-                activateBtn.style.opacity = '1';
-                activateBtn.style.cursor = 'pointer';
-            } else {
-                activateBtn.style.opacity = '0.6';
-                activateBtn.style.cursor = 'not-allowed';
-            }
-        };
 
-        // Add event listeners to all form inputs
-        formInputs.forEach(inputId => {
-            document.getElementById(inputId).addEventListener('input', validateForm);
-        });
 
-        // Add event listeners to radio buttons
-        lieRadios.forEach(radio => {
-            radio.addEventListener('change', validateForm);
-        });
-
-        // Initial validation
-        validateForm();
-    }
-
-    previewGameRound() {
-        // Validate required fields
-        const employeeName = document.getElementById('employee-name').value.trim();
-        const statement1Title = document.getElementById('statement1-title').value.trim();
-        const statement1Content = document.getElementById('statement1-content').value.trim();
-        const statement2Title = document.getElementById('statement2-title').value.trim();
-        const statement2Content = document.getElementById('statement2-content').value.trim();
-        const statement3Title = document.getElementById('statement3-title').value.trim();
-        const statement3Content = document.getElementById('statement3-content').value.trim();
-        const lieStatement = document.querySelector('input[name="lie-statement"]:checked');
-
-        if (!employeeName || !statement1Title || !statement2Title || 
-            !statement3Title || !lieStatement) {
-            this.showModal('Error', 'Please fill in the employee name, all statement titles, and mark which statement is the lie to preview.');
-            return;
-        }
 
         // Get optional fields
         const department = document.getElementById('employee-department').value.trim();
@@ -992,22 +956,48 @@ class GameManager {
     }
 
     updateAdminOverview() {
+        console.log('updateAdminOverview started');
+        console.log('this.gameRounds:', this.gameRounds);
+        
         // Update statistics
         const draftsCount = this.gameRounds.filter(round => round.status === 'draft').length;
         const activeCount = this.gameRounds.filter(round => round.status === 'active').length;
         const endedCount = this.gameRounds.filter(round => round.status === 'finished').length;
 
-        document.getElementById('drafts-count').textContent = draftsCount;
-        document.getElementById('active-games-count').textContent = activeCount;
-        document.getElementById('ended-games-count').textContent = endedCount;
+        console.log('Counts - Drafts:', draftsCount, 'Active:', activeCount, 'Ended:', endedCount);
+
+        const draftsCountElement = document.getElementById('drafts-count');
+        const activeGamesCountElement = document.getElementById('active-games-count');
+        const endedGamesCountElement = document.getElementById('ended-games-count');
+
+        if (draftsCountElement) {
+            draftsCountElement.textContent = draftsCount;
+        } else {
+            console.error('drafts-count element not found');
+        }
+        
+        if (activeGamesCountElement) {
+            activeGamesCountElement.textContent = activeCount;
+        } else {
+            console.error('active-games-count element not found');
+        }
+        
+        if (endedGamesCountElement) {
+            endedGamesCountElement.textContent = endedCount;
+        } else {
+            console.error('ended-games-count element not found');
+        }
 
         // Update drafts list
+        console.log('Updating drafts list...');
         this.updateGameList('drafts-list', 'draft', 'No drafts yet. Save your first draft above!');
         
         // Update active games list
+        console.log('Updating active games list...');
         this.updateGameList('active-games-list', 'active', 'No active games. Activate a draft to start playing!');
         
         // Update ended games list
+        console.log('Updating ended games list...');
         this.updateGameList('ended-games-list', 'finished', 'No finished games yet.');
         
         // Also refresh game room display if it's currently active
@@ -1017,8 +1007,17 @@ class GameManager {
     }
 
     updateGameList(listId, status, emptyMessage) {
+        console.log(`updateGameList called with listId: ${listId}, status: ${status}`);
         const listElement = document.getElementById(listId);
+        console.log(`Found list element:`, listElement);
+        
+        if (!listElement) {
+            console.error(`List element with id '${listId}' not found`);
+            return;
+        }
+        
         const filteredRounds = this.gameRounds.filter(round => round.status === status);
+        console.log(`Filtered rounds for status '${status}':`, filteredRounds);
         
         listElement.innerHTML = '';
 
@@ -1037,6 +1036,7 @@ class GameManager {
                 statusColor = '#ffa500';
                 statusText = 'Draft';
                 actions = `
+                    <button class="primary-btn" onclick="gameManager.activateDraft('${round.id}')">Activate</button>
                     <button class="secondary-btn" onclick="gameManager.editDraft('${round.id}')">Edit</button>
                     <button class="secondary-btn" onclick="gameManager.viewGameRoundDetails('${round.id}')">View</button>
                 `;
@@ -1104,19 +1104,22 @@ class GameManager {
         }
 
         // Populate form with draft data
-        document.getElementById('employee-name').value = round.employeeName;
-        document.getElementById('statement1-title').value = round.statements[0].title;
-        document.getElementById('statement1-content').value = round.statements[0].content;
-        document.getElementById('statement2-title').value = round.statements[1].title;
-        document.getElementById('statement2-content').value = round.statements[1].content;
-        document.getElementById('statement3-title').value = round.statements[2].title;
-        document.getElementById('statement3-content').value = round.statements[2].content;
-        document.getElementById('employee-department').value = round.department !== 'Not specified' ? round.department : '';
-        document.getElementById('introducer-name').value = round.introducer !== 'Not specified' ? round.introducer : '';
+        document.getElementById('employee-name').value = round.employeeName || '';
+        document.getElementById('statement1-title').value = round.statements[0].title || '';
+        document.getElementById('statement1-content').value = round.statements[0].content || '';
+        document.getElementById('statement2-title').value = round.statements[1].title || '';
+        document.getElementById('statement2-content').value = round.statements[1].content || '';
+        document.getElementById('statement3-title').value = round.statements[2].title || '';
+        document.getElementById('statement3-content').value = round.statements[2].content || '';
+        document.getElementById('employee-department').value = round.department || '';
+        document.getElementById('introducer-name').value = round.introducer || '';
 
         // Set radio button for lie
         if (round.lieIndex >= 0) {
-            document.querySelector(`input[name="lie-statement"][value="${round.lieIndex + 1}"]`).checked = true;
+            const radioButton = document.querySelector(`input[name="lie-statement"][value="${round.lieIndex + 1}"]`);
+            if (radioButton) {
+                radioButton.checked = true;
+            }
         }
 
         // Remove the draft from the list
@@ -1126,10 +1129,37 @@ class GameManager {
         // Update admin overview
         this.updateAdminOverview();
 
-        // Scroll to form
-        document.querySelector('.create-game').scrollIntoView({ behavior: 'smooth' });
+        // Switch to create-game section
+        this.switchAdminSection('create-game');
 
-        this.showModal('Draft Loaded', `Draft for <strong>${round.employeeName}</strong> loaded into the form. Complete the information and activate the game when ready.`);
+        this.showModal('Draft Loaded', `Draft for <strong>${round.employeeName}</strong> loaded into the form. Complete the information and save as a new draft when ready.`);
+    }
+
+    activateDraft(roundId) {
+        const round = this.gameRounds.find(r => r.id === roundId);
+        if (!round) return;
+
+        if (round.status !== 'draft') {
+            this.showModal('Error', 'Only draft rounds can be activated.');
+            return;
+        }
+
+        // Check if the draft is complete enough to activate
+        if (!round.employeeName || !round.statements[0].title || !round.statements[1].title || 
+            !round.statements[2].title || round.lieIndex === -1) {
+            this.showModal('Error', 'Cannot activate draft. Please ensure all mandatory fields are completed: Employee Name, Statement Titles, and Lie Selection.');
+            return;
+        }
+
+        // Change status to active
+        round.status = 'active';
+        round.activatedAt = new Date().toISOString();
+        this.saveGameRounds();
+
+        this.showModal('Game Activated!', `Game round for <strong>${round.employeeName}</strong> has been activated and is now available for players to vote on!`);
+        
+        // Update admin overview
+        this.updateAdminOverview();
     }
 
     endGameRound(roundId) {
@@ -1184,27 +1214,41 @@ class GameManager {
 
     // Navigation
     setupNavigation() {
+        console.log('Setting up navigation...');
         const navBtns = document.querySelectorAll('.nav-btn');
+        console.log('Found navigation buttons:', navBtns.length);
+        
         navBtns.forEach(btn => {
+            console.log('Adding click listener to button:', btn.dataset.page);
             btn.addEventListener('click', () => {
                 const page = btn.dataset.page;
+                console.log('Button clicked, navigating to:', page);
                 this.navigateToPage(page);
             });
         });
+        console.log('Navigation setup complete');
     }
 
     navigateToPage(pageName) {
+        console.log('Navigating to page:', pageName);
+        
         // Update navigation buttons
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelector(`[data-page="${pageName}"]`).classList.add('active');
+        const activeBtn = document.querySelector(`[data-page="${pageName}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
 
         // Update page visibility
         document.querySelectorAll('.page').forEach(page => {
             page.classList.remove('active');
         });
-        document.getElementById(`${pageName}-page`).classList.add('active');
+        const targetPage = document.getElementById(`${pageName}-page`);
+        if (targetPage) {
+            targetPage.classList.add('active');
+        }
 
         // Update content based on page
         if (pageName === 'game') {
@@ -1213,8 +1257,16 @@ class GameManager {
             this.updateGameHistory();
             this.updatePlayerStats();
         } else if (pageName === 'admin') {
-            this.updateAdminOverview();
+            console.log('Admin page selected, calling updateAdminOverview...');
+            try {
+                this.updateAdminOverview();
+                console.log('updateAdminOverview completed successfully');
+            } catch (error) {
+                console.error('Error in updateAdminOverview:', error);
+            }
         }
+        
+        console.log('Navigation complete');
     }
 
     // Event Listeners
@@ -1227,19 +1279,11 @@ class GameManager {
             });
         }
 
-        // Admin preview button
-        const adminPreviewBtn = document.getElementById('admin-preview-btn');
-        if (adminPreviewBtn) {
-            adminPreviewBtn.addEventListener('click', () => {
-                this.previewGameRound();
-            });
-        }
-
-        // Admin activate game button
-        const adminActivateBtn = document.getElementById('admin-activate-game-btn');
-        if (adminActivateBtn) {
-            adminActivateBtn.addEventListener('click', () => {
-                this.activateGameFromDraft();
+        // Admin cancel button
+        const adminCancelBtn = document.getElementById('admin-cancel-btn');
+        if (adminCancelBtn) {
+            adminCancelBtn.addEventListener('click', () => {
+                this.cancelGameDraft();
             });
         }
 
@@ -1268,18 +1312,9 @@ class GameManager {
             }
         });
 
-        // Enter key support for inputs
-        const employeeNameInput = document.getElementById('employee-name');
-        if (employeeNameInput) {
-            employeeNameInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    this.saveGameDraft();
-                }
-            });
-        }
 
-        // Form validation for activate button
-        this.setupFormValidation();
+
+
 
         const joinPlayerNameInput = document.getElementById('join-player-name');
         if (joinPlayerNameInput) {
@@ -1390,10 +1425,97 @@ class GameManager {
     hideModal() {
         document.getElementById('modal-overlay').style.display = 'none';
     }
+
+    // Missing methods that are referenced in event listeners
+    endAllActiveGames() {
+        if (confirm('Are you sure you want to end all active games? This action cannot be undone.')) {
+            if (this.gameRounds) {
+                this.gameRounds.forEach(round => {
+                    if (round.status === 'active') {
+                        round.status = 'finished';
+                        round.endedAt = new Date().toISOString();
+                    }
+                });
+                this.saveGameRounds();
+                this.updateAdminOverview();
+                this.showModal('Success', 'All active games have been ended.');
+            }
+        }
+    }
+
+    exportGameHistory() {
+        const historyData = {
+            gameHistory: this.gameHistory,
+            gameRounds: this.gameRounds ? this.gameRounds.filter(round => round.status === 'finished') : [],
+            exportDate: new Date().toISOString()
+        };
+        
+        const dataStr = JSON.stringify(historyData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'game-history-export.json';
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    exportGameStats() {
+        const statsData = {
+            totalGames: this.gameRounds ? this.gameRounds.length : 0,
+            activeGames: this.gameRounds ? this.gameRounds.filter(round => round.status === 'active').length : 0,
+            draftGames: this.gameRounds ? this.gameRounds.filter(round => round.status === 'draft').length : 0,
+            finishedGames: this.gameRounds ? this.gameRounds.filter(round => round.status === 'finished').length : 0,
+            totalPlayers: Object.keys(this.players).length,
+            exportDate: new Date().toISOString()
+        };
+        
+        const dataStr = JSON.stringify(statsData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'game-stats-export.json';
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    exportDrafts() {
+        const draftsData = {
+            drafts: this.gameRounds ? this.gameRounds.filter(round => round.status === 'draft') : [],
+            exportDate: new Date().toISOString()
+        };
+        
+        const dataStr = JSON.stringify(draftsData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'game-drafts-export.json';
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // Additional missing methods
+    updateGameHistory() {
+        console.log('Updating game history...');
+        // This method will be implemented later
+    }
+
+    updatePlayerStats() {
+        console.log('Updating player stats...');
+        // This method will be implemented later
+    }
 }
 
 // Initialize the game when the page loads
 let gameManager;
 document.addEventListener('DOMContentLoaded', () => {
-    gameManager = new GameManager();
+    try {
+        console.log('DOM loaded, creating GameManager...');
+        gameManager = new GameManager();
+        console.log('GameManager created successfully');
+    } catch (error) {
+        console.error('Error creating GameManager:', error);
+    }
 });

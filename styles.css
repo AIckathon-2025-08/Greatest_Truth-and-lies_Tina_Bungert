@@ -1081,14 +1081,14 @@ input[type="text"]:focus {
 
 .overview-stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
     margin-bottom: 2rem;
 }
 
 .stat-card {
     background: #333333;
-    padding: 1.5rem;
+    padding: 1rem;
     border-radius: 12px;
     border: 2px solid #7954ff;
     text-align: center;
@@ -1104,13 +1104,13 @@ input[type="text"]:focus {
 .stat-card h4 {
     color: #78eac1;
     margin-bottom: 0.5rem;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 300;
 }
 
 .stat-card span {
     color: #f4f4f4;
-    font-size: 2rem;
+    font-size: 1.8rem;
 }
 
 .game-lists-container {
